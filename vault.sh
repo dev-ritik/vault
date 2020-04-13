@@ -8,6 +8,16 @@ DATA_PATH=/opt/vault
 INDEX_PATH=$DATA_PATH/index.json
 FILES_PATH=$DATA_PATH/files
 
+command -V gpg >/dev/null 2>&1 && GPG="gpg" || GPG="gpg2"
+[ -z ${PASSWORD_STORE_DIR+x} ] && PASSWORD_STORE_DIR="$HOME/.password-store"
+[ -r "$PASSWORD_STORE_DIR/.gpg-id" ] &&
+  "$GPG" --list-secret-keys $(cat "$PASSWORD_STORE_DIR/.gpg-id") >/dev/null 2>&1 || {
+  printf "\`pass\` must be installed and initialized to encrypt passwords.\\nBe sure it is installed and run \`pass init <yourgpgemail>\`.\\nIf you don't have a GPG public private key pair, run \`%s --full-gen-key\` first.\\n" "$GPG"
+  exit 1
+}
+
+PASSWORD="$(pass vault)"
+
 updateindex() {
   if [ ! -f $INDEX_PATH ]; then
     echo "Index file not found, creating!"
@@ -47,7 +57,7 @@ updateindex() {
   for i in "${!items[@]}"
   do
 #    echo $i ${items[$i]}
-    gpg --symmetric --cipher-algo AES128 --armor --batch --yes --passphrase pass --output $FILES_PATH/${items[$i]} "$i"
+    "$GPG" --symmetric --cipher-algo AES128 --armor --batch --yes --passphrase $PASSWORD --output $FILES_PATH/${items[$i]} "$i"
   done
   ./update.py "$(declare -p items)"
 }
@@ -138,7 +148,7 @@ decrypt() {
   do
     echo "$OUTPUT_PATH$i" :  ${items[$i]}
     mkdir -p $OUTPUT_PATH$(dirname $i)
-    gpg --output "$OUTPUT_PATH$i" -d --batch --quiet --passphrase pass $FILES_PATH/${items[$i]}
+    "$GPG" --output "$OUTPUT_PATH$i" -d --batch --quiet --passphrase $PASSWORD $FILES_PATH/${items[$i]} || echo "Error occoured!!!"
   done
 }
 
@@ -157,7 +167,8 @@ case "$1" in
 	-f|--files) echo "Encrypted files are located at $DATA_PATH";;
 	*) cat << EOF
 
-Vault encrypts-backs up the files included in $INCLUDED
+Vault encrypts-backs up the files included in $INCLUDED.
+Password is stored in "pass vault"
 Allowed options:
   update		Update the index and encrypt the files
   decrypt		Decrypt required files to a location
