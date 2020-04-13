@@ -16,28 +16,27 @@ command -V gpg >/dev/null 2>&1 && GPG="gpg" || GPG="gpg2"
   exit 1
 }
 
-PASSWORD="$(pass vault)"
-
 updateindex() {
+  PASSWORD="$(pass vault)"
   if [ ! -f $INDEX_PATH ]; then
     echo "Index file not found, creating!"
     touch $INDEX_PATH
     time="1234567890"
   else
-    time=$(sed -n '/    "date":/p'  $INDEX_PATH | sed -e 's/    "date": //' -e 's/,//')
-    if [ -z "$time" ];then
+    time=$(sed -n '/    "date":/p' $INDEX_PATH | sed -e 's/    "date": //' -e 's/,//')
+    if [ -z "$time" ]; then
       time="1234567890"
     fi
   fi
 
-  included_lines=("$(tr '\n' ' ' < "$INCLUDED")")
+  included_lines=("$(tr '\n' ' ' <"$INCLUDED")")
 
   if [ -z "$included_lines" ]; then
     echo "Edit $file to add some files paths to backup"
     exit 1
   fi
 
-  mapfile -t excluded_lines < $EXCLUDED
+  mapfile -t excluded_lines <$EXCLUDED
 
   excluded_lines=("${excluded_lines[@]/%/ -prune -o}")
   excluded_lines=("${excluded_lines[@]/#/-path }")
@@ -49,20 +48,20 @@ updateindex() {
 
   declare -A items=()
   while IFS= read -r -d '' key && IFS= read -r -d '' value; do
-      items[$key]=$value
+    items[$key]=$value
   done < <(./process.py "${array[@]}")
 
-#  echo ${!items[*]}
+  # echo ${!items[*]}
 
-  for i in "${!items[@]}"
-  do
-#    echo $i ${items[$i]}
+  for i in "${!items[@]}"; do
+    # echo $i ${items[$i]}
     "$GPG" --symmetric --cipher-algo AES128 --armor --batch --yes --passphrase $PASSWORD --output $FILES_PATH/${items[$i]} "$i"
   done
   ./update.py "$(declare -p items)"
 }
 
 decrypt() {
+  PASSWORD="$(pass vault)"
   OUTPUT_PATH=$pwd
 
   declare -a BACKUP_PATH
@@ -70,63 +69,63 @@ decrypt() {
   if [ ! -f $INDEX_PATH ]; then
     echo "Index file not found!"
   else
-    if [ ! -d $FILES_PATH ];then
+    if [ ! -d $FILES_PATH ]; then
       echo "Files not found!"
     fi
   fi
 
   while [[ $# -gt 0 ]]; do
-      key="$1"
-      case "$key" in
-          -b|--backup)
-              nextArg="$2"
-              while ! [[ "$nextArg" =~ -.* ]] && [[ $# > 1 ]]; do
-                  case $nextArg in
-                      -o|--output)
-                          echo "Please provide proper backup path"
-                      ;;
-                      *)
-                          BACKUP_PATH+=("$nextArg")
-                      ;;
-                  esac
-                  if ! [[ "$2" =~ -.* ]]; then
-                      shift
-                      nextArg="$2"
-                  else
-                      shift
-                      break
-                  fi
-              done
+    key="$1"
+    case "$key" in
+    -b | --backup)
+      nextArg="$2"
+      while ! [[ "$nextArg" =~ -.* ]] && [[ $# > 1 ]]; do
+        case $nextArg in
+        -o | --output)
+          echo "Please provide proper backup path"
           ;;
-          -o|--output)
-              nextArg="$2"
-              while ! [[ "$nextArg" =~ -.* ]] && [[ $# > 1 ]]; do
-                  case $nextArg in
-                      -b|--backup)
-                          echo "Please provide proper output path"
-                      ;;
-                      *)
-                          OUTPUT_PATH=$nextArg
-                      ;;
-                  esac
-                  if ! [[ "$2" =~ -.* ]]; then
-                      shift
-                      nextArg="$2"
-                  else
-                      shift
-                      break
-                  fi
-              done
+        *)
+          BACKUP_PATH+=("$nextArg")
           ;;
-          -h|--help)
-              display_help
+        esac
+        if ! [[ "$2" =~ -.* ]]; then
+          shift
+          nextArg="$2"
+        else
+          shift
+          break
+        fi
+      done
+      ;;
+    -o | --output)
+      nextArg="$2"
+      while ! [[ "$nextArg" =~ -.* ]] && [[ $# > 1 ]]; do
+        case $nextArg in
+        -b | --backup)
+          echo "Please provide proper output path"
           ;;
-          *)
-              echo "Wrong option!!"
-              exit 1
+        *)
+          OUTPUT_PATH=$nextArg
           ;;
-      esac
-      shift
+        esac
+        if ! [[ "$2" =~ -.* ]]; then
+          shift
+          nextArg="$2"
+        else
+          shift
+          break
+        fi
+      done
+      ;;
+    -h | --help)
+      display_help
+      ;;
+    *)
+      echo "Wrong option!!"
+      exit 1
+      ;;
+    esac
+    shift
   done
 
   echo "Using ${BACKUP_PATH[*]} for picking backup files!"
@@ -144,28 +143,27 @@ decrypt() {
 
   echo "Restoring "${#items[@]}" files"
 
-  for i in "${!items[@]}"
-  do
-    echo "$OUTPUT_PATH$i" :  ${items[$i]}
+  for i in "${!items[@]}"; do
+    echo "$OUTPUT_PATH$i" : ${items[$i]}
     mkdir -p $OUTPUT_PATH$(dirname $i)
     "$GPG" --output "$OUTPUT_PATH$i" -d --batch --quiet --passphrase $PASSWORD $FILES_PATH/${items[$i]} || echo "Error occoured!!!"
   done
 }
 
 display_help() {
-    echo "Usage: $0 [option...] {output|backup}" >&2
-    echo
-    echo "   -o, --output           Output path to restore files to (default pwd)"
-    echo "   -b, --backup           Set of paths to restore files from"
-    echo
-    exit 1
+  echo "Usage: $0 [option...] {output|backup}" >&2
+  echo
+  echo "   -o, --output           Output path to restore files to (default pwd)"
+  echo "   -b, --backup           Set of paths to restore files from"
+  echo
+  exit 1
 }
 
 case "$1" in
-	update) updateindex ;;
-	decrypt) decrypt "${@:2}";;
-	-f|--files) echo "Encrypted files are located at $DATA_PATH";;
-	*) cat << EOF
+update) updateindex ;;
+decrypt) decrypt "${@:2}" ;;
+-f | --files) echo "Encrypted files are located at $DATA_PATH" ;;
+*) cat <<EOF ;;
 
 Vault encrypts-backs up the files included in $INCLUDED.
 Password is stored in "pass vault"
