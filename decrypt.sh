@@ -7,7 +7,6 @@ OUTPUT_PATH=$pwd
 
 declare -a BACKUP_PATH
 
-
 if [ ! -f $INDEX_PATH ]; then
   echo "Index file not found!"
 else
@@ -59,6 +58,10 @@ while [[ $# -gt 0 ]]; do
                 fi
             done
         ;;
+        *)
+            echo "Wrong option!!"
+            exit 1
+        ;;
     esac
     shift
 done
@@ -82,5 +85,5 @@ for i in "${!items[@]}"
 do
   echo $i :  ${items[$i]}
   mkdir -p $OUTPUT_PATH$(dirname $i)
-  gpg --output $OUTPUT_PATH$i -d --batch --quiet --passphrase pass $FILES_PATH/${items[$i]}
+  gpg --output "$OUTPUT_PATH$i" -d --batch --quiet --passphrase pass $FILES_PATH/${items[$i]}
 done

@@ -18,10 +18,8 @@ if not paths[0].startswith('declare -A items='):
     raise AssertionError('Invalid associated array')
 
 paths = paths[0][18:-1]
-print()
-print()
 
-match = re.findall('\[([\w \/.-]*)\]="([\w.]*)" ?', paths)
+match = re.findall('\["?([\w \/.-]*)"?\]="([\w.]*)" ?', paths)
 updated_path_names = {}
 
 for ma in match:
