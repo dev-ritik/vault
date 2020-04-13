@@ -40,7 +40,6 @@ try:
 
     backup_data['paths'].update(updated_path_names)
 except ValueError:
-    print('First time')
     FIRST_TIME = True
     backup_data = {'paths': updated_path_names}
 
