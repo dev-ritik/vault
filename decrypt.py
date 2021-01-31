@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 
 """
-Do not print anything!!
+Do not print anything (to STOUT)!!
 """
 import json
 import os
@@ -11,12 +11,12 @@ paths = sys.argv[1:]
 if len(paths) < 1:
     raise AssertionError('Invalid associated array')
 
-DATA_PATH = '/opt/vault'
+DATA_PATH = '/home/ritik/.local/share/vault'
 JSON_FILE_LOCATION = os.path.join(DATA_PATH, 'index.json')
 FIRST_TIME = False
 
 if not os.path.isfile(JSON_FILE_LOCATION):
-    raise AssertionError('File not found')
+    raise AssertionError('Index file not found')
 
 # Read index file
 try:

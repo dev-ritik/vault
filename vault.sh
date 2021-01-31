@@ -1,10 +1,9 @@
 #!/bin/bash
 
 CONFIG_PATH=~/.config/vault
-INCLUDED=$CONFIG_PATH/.include
-EXCLUDED=$CONFIG_PATH/.exclude
+TARGETS=$CONFIG_PATH/.targets
 
-DATA_PATH=/opt/vault
+DATA_PATH=~/.local/share/vault
 INDEX_PATH=$DATA_PATH/index.json
 FILES_PATH=$DATA_PATH/files
 
@@ -18,8 +17,9 @@ command -V gpg >/dev/null 2>&1 && GPG="gpg" || GPG="gpg2"
 
 updateindex() {
   PASSWORD="$(pass vault)"
+
   if [ ! -f $INDEX_PATH ]; then
-    echo "Index file not found, creating!"
+    echo "Index file not found, creating\!"
     touch $INDEX_PATH
     time="1234567890"
   else
@@ -29,22 +29,22 @@ updateindex() {
     fi
   fi
 
-  included_lines=("$(tr '\n' ' ' <"$INCLUDED")")
+  # Remove comments and blank lines
+  PATHS=$(sed 's/\s*#.*//g; /^$/d' $TARGETS)
 
-  if [ -z "$included_lines" ]; then
-    echo "Edit $file to add some files paths to backup"
+  # Get paths to encrypt by removing ! and changing newlines to space
+  included_paths=$(echo "$PATHS" | sed '/^\!/d;:a;N;$!ba;s/\n/ /g')
+
+  if [ -z "$included_paths" ]; then
+    echo "Edit $TARGETS to add some files paths to backup"
     exit 1
   fi
 
-  mapfile -t excluded_lines <$EXCLUDED
+  # Filter ! lines and generate excluded array
+  excluded_paths=$(echo "$PATHS" | sed '/^\!/!d;s/^\!/-path /g;s/$/ -prune -o/g')
 
-  excluded_lines=("${excluded_lines[@]/%/ -prune -o}")
-  excluded_lines=("${excluded_lines[@]/#/-path }")
-
-  #echo $time
-
-  readarray -d '' array < <(find $included_lines ${excluded_lines[*]} -type f -newermt @$(($time)) -print0)
-  echo "------------Found" ${#array[@]} " modified Files--------------"
+  readarray -d '' array < <(find $included_paths $excluded_paths -type f -newermt @$(($time)) -print0)
+  echo "------------Found" ${#array[@]} "modified Files--------------"
 
   declare -A items=()
   while IFS= read -r -d '' key && IFS= read -r -d '' value; do
@@ -67,10 +67,10 @@ decrypt() {
   declare -a BACKUP_PATH
 
   if [ ! -f $INDEX_PATH ]; then
-    echo "Index file not found!"
+    echo "Index file not found\!"
   else
     if [ ! -d $FILES_PATH ]; then
-      echo "Files not found!"
+      echo "Files not found\!"
     fi
   fi
 
@@ -128,13 +128,18 @@ decrypt() {
     shift
   done
 
-  echo "Using ${BACKUP_PATH[*]} for picking backup files!"
-  echo "Using $OUTPUT_PATH as output path"
-
   if [ -z "$BACKUP_PATH" ]; then
     echo "Provide files/directories to decrypt files from"
     exit 1
   fi
+
+  if [ -z "$OUTPUT_PATH" ]; then
+    OUTPUT_PATH=/tmp
+    echo "Using $OUTPUT_PATH as a directory to restore file to"
+  fi
+
+  echo "Using ${BACKUP_PATH[*]} for picking backup files!"
+  echo "Using $OUTPUT_PATH as output path"
 
   declare -A items=()
   while IFS= read -r -d '' key && IFS= read -r -d '' value; do
@@ -146,15 +151,15 @@ decrypt() {
   for i in "${!items[@]}"; do
     echo "$OUTPUT_PATH$i" : ${items[$i]}
     mkdir -p $OUTPUT_PATH$(dirname $i)
-    "$GPG" --output "$OUTPUT_PATH$i" -d --batch --quiet --passphrase $PASSWORD $FILES_PATH/${items[$i]} || echo "Error occoured!!!"
+    "$GPG" --output "$OUTPUT_PATH$i" -d --batch --quiet --passphrase $PASSWORD $FILES_PATH/${items[$i]} || echo "Error occurred!!!"
   done
 }
 
 display_help() {
   echo "Usage: $0 [option...] {output|backup}" >&2
   echo
-  echo "   -o, --output           Output path to restore files to (default pwd)"
-  echo "   -b, --backup           Set of paths to restore files from"
+  echo "   -o, --output           Output path to restore files to (default /tmp)"
+  echo "   -b, --backup           Set of paths to restore files from. Use /* for all"
   echo
   exit 1
 }
@@ -165,8 +170,10 @@ decrypt) decrypt "${@:2}" ;;
 -f | --files) echo "Encrypted files are located at $DATA_PATH" ;;
 *) cat <<EOF ;;
 
-Vault encrypts-backs up the files included in $INCLUDED.
-Password is stored in "pass vault"
+Vault encrypts-backs up the files included in $TARGETS
+Password is stored in "pass vault". Use 
+$ pass insert vault
+to store the password
 Allowed options:
   update		Update the index and encrypt the files
   decrypt		Decrypt required files to a location

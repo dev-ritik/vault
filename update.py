@@ -7,7 +7,7 @@ import sys
 import time
 from datetime import datetime
 
-DATA_PATH = '/opt/vault'
+DATA_PATH = '/home/ritik/.local/share/vault'
 
 paths = sys.argv[1:]
 
@@ -31,7 +31,7 @@ JSON_FILE_LOCATION = os.path.join(DATA_PATH, 'index.json')
 FIRST_TIME = False
 
 if not os.path.isfile(JSON_FILE_LOCATION):
-    raise AssertionError('File not found')
+    raise AssertionError('Index file not found')
 
 # Read index file
 try:
