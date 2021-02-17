@@ -10,7 +10,7 @@ try:
 except OSError as e:
     raise AssertionError('Issue in file paths parsing')
 
-DATA_PATH = '/home/ritik/.local/share/vault'
+DATA_PATH = os.environ["DATA_PATH"]
 JSON_FILE_LOCATION = os.path.join(DATA_PATH, 'index.json')
 FIRST_TIME = False
 

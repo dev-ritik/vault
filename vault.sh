@@ -3,7 +3,7 @@
 CONFIG_PATH=~/.config/vault
 TARGETS=$CONFIG_PATH/.targets
 
-DATA_PATH=~/.local/share/vault
+export DATA_PATH=~/.local/share/vault
 INDEX_PATH=$DATA_PATH/index.json
 FILES_PATH=$DATA_PATH/files
 

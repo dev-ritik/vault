@@ -7,7 +7,7 @@ import sys
 import time
 from datetime import datetime
 
-DATA_PATH = '/home/ritik/.local/share/vault'
+DATA_PATH = os.environ["DATA_PATH"]
 
 paths = sys.argv[1:]
 
@@ -25,7 +25,6 @@ updated_path_names = {}
 for ma in match:
     print(ma[0], ma[1])
     updated_path_names[ma[0]] = ma[1]
-
 
 JSON_FILE_LOCATION = os.path.join(DATA_PATH, 'index.json')
 FIRST_TIME = False

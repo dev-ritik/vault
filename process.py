@@ -5,7 +5,7 @@ import os
 import random
 import string
 
-DATA_PATH = '/home/ritik/.local/share/vault'
+DATA_PATH = os.environ["DATA_PATH"]
 
 try:
     fd_in = os.fdopen(4, 'r')
