@@ -1,15 +1,14 @@
 #!/usr/bin/python3
 
-"""
-Do not print anything (to STOUT)!!
-"""
 import json
 import os
-import sys
 
-paths = sys.argv[1:]
-if len(paths) < 1:
-    raise AssertionError('Invalid associated array')
+try:
+    fd_in = os.fdopen(4, 'r')
+    fd_out = os.fdopen(3, 'w')
+    paths = fd_in.read().strip().split()
+except OSError as e:
+    raise AssertionError('Issue in file paths parsing')
 
 DATA_PATH = '/home/ritik/.local/share/vault'
 JSON_FILE_LOCATION = os.path.join(DATA_PATH, 'index.json')
@@ -40,7 +39,7 @@ try:
             restore_dict[path] = backed_paths[path]
             backed_paths.pop(path)
     for k in restore_dict:
-        sys.stdout.write('%s\0%s\0' % (k, restore_dict[k]))
+        fd_out.write('%s\0%s\0' % (k, restore_dict[k]))
 
 except ValueError:
     raise AssertionError('No data found!')

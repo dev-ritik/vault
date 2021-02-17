@@ -46,10 +46,19 @@ updateindex() {
   readarray -d '' array < <(find $included_paths $excluded_paths -type f -newermt @$(($time)) -print0)
   echo "------------Found" ${#array[@]} "modified Files--------------"
 
+  # Use extra file descriptors for passing data
+  tmpfile=$(mktemp)
+  exec 3>"$tmpfile"
+  exec 4<"$tmpfile"
+  rm "$tmpfile"
+
+  echo >&3 "${array[@]}"
+  ./process.py
+
   declare -A items=()
   while IFS= read -r -d '' key && IFS= read -r -d '' value; do
     items[$key]=$value
-  done < <(./process.py "${array[@]}")
+  done < <(cat <&4)
 
   # echo ${!items[*]}
 
@@ -141,10 +150,19 @@ decrypt() {
   echo "Using ${BACKUP_PATH[*]} for picking backup files!"
   echo "Using $OUTPUT_PATH as output path"
 
+  # Use extra file descriptors for passing data
+  tmpfile=$(mktemp)
+  exec 3>"$tmpfile"
+  exec 4<"$tmpfile"
+  rm "$tmpfile"
+
+  echo >&3 "${BACKUP_PATH[@]}"
+  ./decrypt.py
+
   declare -A items=()
   while IFS= read -r -d '' key && IFS= read -r -d '' value; do
     items[$key]=$value
-  done < <(./decrypt.py "${BACKUP_PATH[@]}")
+  done < <(cat <&4)
 
   echo "Restoring "${#items[@]}" files"
 

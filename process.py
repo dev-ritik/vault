@@ -1,20 +1,18 @@
 #!/usr/bin/python3
 
-"""
-Do not print anything (to STOUT)!!
-"""
-
 import json
 import os
 import random
 import string
-import sys
-
-# from os.path import expanduser
-
-paths = sys.argv[1:]
 
 DATA_PATH = '/home/ritik/.local/share/vault'
+
+try:
+    fd_in = os.fdopen(4, 'r')
+    fd_out = os.fdopen(3, 'w')
+    paths = fd_in.read().strip().split()
+except OSError as e:
+    raise AssertionError('Issue in file paths parsing')
 
 
 def get_random_name():
@@ -72,4 +70,4 @@ else:
 
 # return new tuple list
 for k in new_path_name:
-    sys.stdout.write('%s\0%s\0' % (k, new_path_name[k]))
+    fd_out.write('%s\0%s\0' % (k, new_path_name[k]))
