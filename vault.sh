@@ -10,12 +10,12 @@ FILES_PATH=$DATA_PATH/files
 command -V gpg >/dev/null 2>&1 && GPG="gpg" || GPG="gpg2"
 [ -z ${PASSWORD_STORE_DIR+x} ] && PASSWORD_STORE_DIR="$HOME/.password-store"
 [ -r "$PASSWORD_STORE_DIR/.gpg-id" ] &&
-  "$GPG" --list-secret-keys $(cat "$PASSWORD_STORE_DIR/.gpg-id") >/dev/null 2>&1 || {
-  printf "\`pass\` must be installed and initialized to encrypt passwords.\\nBe sure it is installed and run \`pass init <yourgpgemail>\`.\\nIf you don't have a GPG public private key pair, run \`%s --full-gen-key\` first.\\n" "$GPG"
+  "$GPG" --list-secret-keys "$(cat "$PASSWORD_STORE_DIR/.gpg-id")" >/dev/null 2>&1 || {
+  printf "\`pass\` must be installed and initialized to encrypt passwords.\\nBe sure it is installed and run \`pass init <your gpg email>\`.\\nIf you don't have a GPG public private key pair, run \`%s --full-gen-key\` first.\\n" "$GPG"
   exit 1
 }
 
-updateindex() {
+update_index() {
   PASSWORD="$(pass vault)"
 
   if [ ! -f $INDEX_PATH ]; then
@@ -43,14 +43,15 @@ updateindex() {
   # Filter ! lines and generate excluded array
   excluded_paths=$(echo "$PATHS" | sed '/^\!/!d;s/^\!/-path /g;s/$/ -prune -o/g')
 
-  readarray -d '' array < <(find $included_paths $excluded_paths -type f -newermt @$(($time)) -print0)
+  # shellcheck disable=SC2086
+  readarray -d '' array < <(find $included_paths $excluded_paths -type f -newermt @$((time)) -print0)
   echo "------------Found" ${#array[@]} "modified Files--------------"
 
   # Use extra file descriptors for passing data
-  tmpfile=$(mktemp)
-  exec 3>"$tmpfile"
-  exec 4<"$tmpfile"
-  rm "$tmpfile"
+  tmp_file=$(mktemp)
+  exec 3>"$tmp_file"
+  exec 4<"$tmp_file"
+  rm "$tmp_file"
 
   echo >&3 "${array[@]}"
   ./process.py
@@ -64,14 +65,14 @@ updateindex() {
 
   for i in "${!items[@]}"; do
     # echo $i ${items[$i]}
-    "$GPG" --symmetric --cipher-algo AES128 --armor --batch --yes --passphrase $PASSWORD --output $FILES_PATH/${items[$i]} "$i"
+    "$GPG" --symmetric --cipher-algo AES128 --armor --batch --yes --passphrase "$PASSWORD" --output $FILES_PATH/"${items[$i]}" "$i"
   done
   ./update.py "$(declare -p items)"
 }
 
 decrypt() {
   PASSWORD="$(pass vault)"
-  OUTPUT_PATH=$pwd
+  OUTPUT_PATH=$(pwd)
 
   declare -a BACKUP_PATH
 
@@ -88,7 +89,7 @@ decrypt() {
     case "$key" in
     -b | --backup)
       nextArg="$2"
-      while ! [[ "$nextArg" =~ -.* ]] && [[ $# > 1 ]]; do
+      while ! [[ "$nextArg" =~ -.* ]] && [[ $# -gt 1 ]]; do
         case $nextArg in
         -o | --output)
           echo "Please provide proper backup path"
@@ -108,7 +109,7 @@ decrypt() {
       ;;
     -o | --output)
       nextArg="$2"
-      while ! [[ "$nextArg" =~ -.* ]] && [[ $# > 1 ]]; do
+      while ! [[ "$nextArg" =~ -.* ]] && [[ $# -gt 1 ]]; do
         case $nextArg in
         -b | --backup)
           echo "Please provide proper output path"
@@ -137,24 +138,20 @@ decrypt() {
     shift
   done
 
+  # shellcheck disable=SC2128
   if [ -z "$BACKUP_PATH" ]; then
     echo "Provide files/directories to decrypt files from"
     exit 1
-  fi
-
-  if [ -z "$OUTPUT_PATH" ]; then
-    OUTPUT_PATH=/tmp
-    echo "Using $OUTPUT_PATH as a directory to restore file to"
   fi
 
   echo "Using ${BACKUP_PATH[*]} for picking backup files!"
   echo "Using $OUTPUT_PATH as output path"
 
   # Use extra file descriptors for passing data
-  tmpfile=$(mktemp)
-  exec 3>"$tmpfile"
-  exec 4<"$tmpfile"
-  rm "$tmpfile"
+  tmp_file=$(mktemp)
+  exec 3>"$tmp_file"
+  exec 4<"$tmp_file"
+  rm "$tmp_file"
 
   echo >&3 "${BACKUP_PATH[@]}"
   ./decrypt.py
@@ -164,26 +161,26 @@ decrypt() {
     items[$key]=$value
   done < <(cat <&4)
 
-  echo "Restoring "${#items[@]}" files"
+  echo "Restoring '${#items[@]}' files"
 
   for i in "${!items[@]}"; do
-    echo "$OUTPUT_PATH$i" : ${items[$i]}
-    mkdir -p $OUTPUT_PATH$(dirname $i)
-    "$GPG" --output "$OUTPUT_PATH$i" -d --batch --quiet --passphrase $PASSWORD $FILES_PATH/${items[$i]} || echo "Error occurred!!!"
+    echo "$OUTPUT_PATH$i" : "${items[$i]}"
+    mkdir -p $OUTPUT_PATH"$(dirname "$i")"
+    "$GPG" --output "$OUTPUT_PATH$i" -d --batch --quiet --passphrase "$PASSWORD" $FILES_PATH/"${items[$i]}" || echo "Error occurred!!!"
   done
 }
 
 display_help() {
   echo "Usage: $0 [option...] {output|backup}" >&2
   echo
-  echo "   -o, --output           Output path to restore files to (default /tmp)"
+  echo "   -o, --output           Output path to restore files to (default pwd)"
   echo "   -b, --backup           Set of paths to restore files from. Use /* for all"
   echo
   exit 1
 }
 
 case "$1" in
-update) updateindex ;;
+update) update_index ;;
 decrypt) decrypt "${@:2}" ;;
 -f | --files) echo "Encrypted files are located at $DATA_PATH" ;;
 *) cat <<EOF ;;

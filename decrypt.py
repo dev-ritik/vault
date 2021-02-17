@@ -12,7 +12,6 @@ except OSError as e:
 
 DATA_PATH = os.environ["DATA_PATH"]
 JSON_FILE_LOCATION = os.path.join(DATA_PATH, 'index.json')
-FIRST_TIME = False
 
 if not os.path.isfile(JSON_FILE_LOCATION):
     raise AssertionError('Index file not found')

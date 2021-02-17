@@ -21,9 +21,8 @@ def get_random_name():
     return ''.join(random_name)
 
 
-# home = expanduser("~")
 JSON_FILE_LOCATION = os.path.join(DATA_PATH, 'index.json')
-FIRST_TIME = False
+first_time = False
 
 if not os.path.isfile(JSON_FILE_LOCATION):
     raise AssertionError('Index file not found')
@@ -33,7 +32,7 @@ try:
     with open(JSON_FILE_LOCATION) as f:
         files_data = json.load(f)
 except ValueError:
-    FIRST_TIME = True
+    first_time = True
     files_data = {}
 
 names = set()
@@ -41,7 +40,7 @@ path_name = dict()
 new_path_name = dict()
 
 # Check if these are new & get new/existing file name
-if FIRST_TIME:
+if first_time:
     for path in paths:
         new_name = get_random_name()
         while new_name in names:
