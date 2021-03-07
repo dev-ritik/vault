@@ -10,9 +10,11 @@ DATA_PATH = os.environ["DATA_PATH"]
 try:
     fd_in = os.fdopen(4, 'r')
     fd_out = os.fdopen(3, 'w')
-    paths = fd_in.read().strip().split()
+    paths = fd_in.read().strip().splitlines()
 except OSError as e:
     raise AssertionError('Issue in file paths parsing')
+
+print(f'------------Found {len(paths)} modified Files--------------')
 
 
 def get_random_name():

@@ -43,17 +43,15 @@ update_index() {
   # Filter ! lines and generate excluded array
   excluded_paths=$(echo "$PATHS" | sed '/^\!/!d;s/^\!/-path /g;s/$/ -prune -o/g')
 
-  # shellcheck disable=SC2086
-  readarray -d '' array < <(find $included_paths $excluded_paths -type f -newermt @$((time)) -print0)
-  echo "------------Found" ${#array[@]} "modified Files--------------"
-
   # Use extra file descriptors for passing data
   tmp_file=$(mktemp)
   exec 3>"$tmp_file"
   exec 4<"$tmp_file"
   rm "$tmp_file"
 
-  echo >&3 "${array[@]}"
+  # shellcheck disable=SC2086
+  find $included_paths $excluded_paths -type f -newermt @$((time)) -exec printf '%s\n' {} + >&3
+
   ./process.py
 
   declare -A items=()
@@ -186,13 +184,15 @@ decrypt) decrypt "${@:2}" ;;
 *) cat <<EOF ;;
 
 Vault encrypts-backs up the files included in $TARGETS
-Password is stored in "pass vault". Use 
+These are encrypted and stored in $FILES_PATH
+and index files is at $INDEX_PATH
+Password is stored in "pass vault". Use this command store the password
 $ pass insert vault
-to store the password
+
 Allowed options:
   update		Update the index and encrypt the files
   decrypt		Decrypt required files to a location
-  files     Location of files stored available to be shared
-  all else	Print this message
+  files			Location of files stored available to be shared
+  all else		Print this message
 EOF
 esac
